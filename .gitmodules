@@ -1,4 +1,4 @@
 [submodule "externals/tidepay-lib"]
 	path = externals/tidepay-lib
-	url = https://github.com/choiip/tidepay-lib.git
+	url = https://github.com/TidePay/tidepay-lib.git
 	branch = master
