@@ -272,6 +272,7 @@ export default class UserJournalPage extends React.Component {
       this.setState({
         loginInfo,
         unreadCount,
+        appliedFilter: defaultFilter,
       });
     };
     const getUnreadCount = (loginInfo) => {
@@ -419,9 +420,7 @@ export default class UserJournalPage extends React.Component {
         };
       } else {
         console.log('Handle read journal all');
-        const { loginInfo, appliedFilter, filter } = this.state;
-        console.log('## applied', appliedFilter);
-        console.log('## filter', filter);
+        const { loginInfo, appliedFilter } = this.state;
         const { username } = loginInfo;
         promise = VaultClient.setAllUserJournalStatus(loginInfo, username, appliedFilter);
         updateStateCb = () => {
