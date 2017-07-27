@@ -36,6 +36,8 @@ const messageIdString = [
   'Update change of phone number',
   'Upload verification of bank account',
   'Request token to set 2FA',
+  'Accept / reject bank account by admin',
+  'Pocket activated',
 ];
 
 const messageTypeString = [
@@ -52,7 +54,7 @@ const filterOptions = messageIdString.slice(1).map((value, index) => {
   return { label: value, value: index + 1 };
 });
 
-const defaultFilter = [16, 4, 5, 6, 7, 8, 25, 11, 26, 20, 27, 1, 24, 15];
+const defaultFilter = [16, 13, 30, 4, 5, 6, 7, 8, 25, 11, 26, 19, 20, 27, 29, 1, 24, 15];
 
 function LoadButton(props) {
   const { text, onLoad, options = [] } = props;
@@ -133,7 +135,24 @@ function JournalTable(props) {
     </table>
   );
 
-  return table;
+  const readAllButton = (
+    <div>
+      <AsyncButton
+        type="button"
+        onClick={onRead}
+        pendingText="Processing..."
+        fulFilledText="Mark all as read"
+        rejectedText="Mark all as read"
+        text="Mark all as read"
+      />
+    </div>
+  );
+  return (
+    <div>
+      {table}
+      {readAllButton}
+    </div>
+  );
 }
 
 function JournalPagination(props) {
@@ -226,6 +245,7 @@ export default class UserJournalPage extends React.Component {
       loginInfo: null,
       unreadCount: null,
       filter: defaultFilter,
+      appliedFilter: [],
       pagination: {
         journals: null,
         curr: null,
@@ -315,6 +335,7 @@ export default class UserJournalPage extends React.Component {
             journals: null,
             link: null,
           },
+          appliedFilter: filter,
         });
         return Promise.resolve();
       })
@@ -328,9 +349,9 @@ export default class UserJournalPage extends React.Component {
   handleGetJournalsPagination(offset, limit) {
     console.log('Handle get journals pagination');
 
-    const { loginInfo, filter } = this.state;
+    const { loginInfo, appliedFilter } = this.state;
     const { username } = loginInfo;
-    return VaultClient.getUserJournalsPagination(loginInfo, username, offset, limit, filter)
+    return VaultClient.getUserJournalsPagination(loginInfo, username, offset, limit, appliedFilter)
       .then((resp) => {
         const { journals, total, link } = resp;
         this.setState({
@@ -351,9 +372,9 @@ export default class UserJournalPage extends React.Component {
   handleGetJournalsScrolling(limit, marker) {
     console.log('Handle get journals scrolling');
 
-    const { loginInfo, filter } = this.state;
+    const { loginInfo, appliedFilter } = this.state;
     const { username } = loginInfo;
-    return VaultClient.getUserJournals(loginInfo, username, limit, marker, filter)
+    return VaultClient.getUserJournals(loginInfo, username, limit, marker, appliedFilter)
       .then((resp) => {
         const { journals, link } = resp;
         const newState = update(this.state, {
@@ -376,14 +397,17 @@ export default class UserJournalPage extends React.Component {
 
   getHandleReadJournal(viewType) {
     return (value) => {
-      const { id: journalId, index: arrayIndex } = value;
-      console.log('Handle read journal', journalId, arrayIndex);
 
-      const { loginInfo } = this.state;
-      const { username } = loginInfo;
-      return VaultClient.setUserJournalStatus(loginInfo, username, journalId)
-        .then(() => {
-          const newState = update(this.state, {
+      let promise;
+      let updateStateCb;
+      if (value) {
+        const { id: journalId, index: arrayIndex } = value;
+        console.log('Handle read journal', journalId, arrayIndex);
+        const { loginInfo } = this.state;
+        const { username } = loginInfo;
+        promise = VaultClient.setUserJournalStatus(loginInfo, username, journalId);
+        updateStateCb = () => {
+          return update(this.state, {
             [viewType]: {
               journals: {
                 [arrayIndex]: {
@@ -392,6 +416,32 @@ export default class UserJournalPage extends React.Component {
               },
             },
           });
+        };
+      } else {
+        console.log('Handle read journal all');
+        const { loginInfo, appliedFilter, filter } = this.state;
+        console.log('## applied', appliedFilter);
+        console.log('## filter', filter);
+        const { username } = loginInfo;
+        promise = VaultClient.setAllUserJournalStatus(loginInfo, username, appliedFilter);
+        updateStateCb = () => {
+          return update(this.state, {
+            [viewType]: {
+              journals: {
+                $apply: (journals) => {
+                  return journals.map(j => update(j, {
+                    read: { $set: true },
+                  }));
+                },
+              },
+            },
+          });
+        };
+      }
+
+      return promise
+        .then(() => {
+          const newState = updateStateCb();
           this.setState(newState);
           return Promise.resolve();
         }).catch((err) => {
