@@ -166,11 +166,11 @@ export default class ExchangePage extends React.Component {
       return Promise.reject(new Error('Invalid currency'));
     }
 
-    return TidePayAPI.getExchangeRate(baseCurrency, symbolCurrency)
+    return TidePayAPI.getRealTimeExchangeRate(baseCurrency, symbolCurrency)
       .then((result) => {
         this.setState({
-          exchangeRate: result.rates[symbolCurrency],
-          exchangeFromCurrency: result.base,
+          exchangeRate: result.rate,
+          exchangeFromCurrency: baseCurrency,
           exchangeToCurrency: symbolCurrency,
         });
         console.log('Exchange rate:', result);
