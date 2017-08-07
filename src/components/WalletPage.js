@@ -1,5 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router';
+import Modal from 'react-modal';
 import moment from 'moment';
 import AsyncButton from './common/AsyncButton';
 import { VaultClient, TidePayAPI, VCUtils as Utils } from '../logics';
@@ -7,7 +8,11 @@ import UnlockButton from './common/UnlockButton';
 import DropdownMenu from './common/DropdownMenu';
 
 function TransactionHistory(props) {
-  const { pocket, transactionHistory } = props;
+  const {
+    pocket,
+    transactionHistory,
+    onSelectTransaction,
+  } = props;
   if (!pocket) {
     return (
       <div>
@@ -51,6 +56,11 @@ function TransactionHistory(props) {
     };
   }
 
+  function handleSelectTransaction(transactionID, event) {
+    event.preventDefault();
+    onSelectTransaction(transactionID);
+  }
+
   const rows = transactionHistory.map((transaction) => {
     const {
       transactionID,
@@ -61,12 +71,16 @@ function TransactionHistory(props) {
       status,
       amount,
     } = convertHuman(transaction);
+    const onClick = handleSelectTransaction.bind(this, transactionID);
     return (
       <tr key={transactionID}>
         <td>{time}</td>
         <td>{descriptions[0]}<br />{descriptions[1]}</td>
         <td>{status}</td>
         <td>{amount}</td>
+        <td>
+          <button onClick={onClick}>Details</button>
+        </td>
       </tr>
     );
   });
@@ -87,10 +101,58 @@ function TransactionHistory(props) {
           <td width="350">Description</td>
           <td width="100">Status</td>
           <td width="100">Amount</td>
+          <td width="100">&nbsp;</td>
         </tr>
       </thead>
       <tbody>{rows}</tbody>
     </table>
+  );
+}
+
+function TransactionModal(props) {
+  const {
+    selectedTransaction,
+    transactionDetails,
+    onClose,
+  } = props;
+
+  if (!selectedTransaction) {
+    return null;
+  }
+
+  let content;
+  if (transactionDetails) {
+    const {
+      transactionID,
+      ...rest
+    } = transactionDetails;
+    content = (
+      <div>
+        <h1>ID: {transactionID}</h1>
+        <pre>{JSON.stringify(rest, null, 2)}</pre>
+      </div>
+    );
+  } else {
+    content = (
+      <div>
+        <p>Loading...</p>
+      </div>
+    );
+  }
+
+  const handleClose = (event) => {
+    event.preventDefault();
+    onClose();
+  };
+  return (
+    <Modal
+      isOpen={!!selectedTransaction}
+      contentLabel={selectedTransaction}
+    >
+      {content}
+      <br />
+      <button onClick={handleClose}>Close</button>
+    </Modal>
   );
 }
 
@@ -196,12 +258,16 @@ export default class WalletPage extends React.Component {
       supportedCurrencies: [],
       selectedPocket: null,
       transactionHistory: null,
+      selectedTransaction: null,
+      transactionDetails: null,
     };
     this.handleActivatePocket = this.handleActivatePocket.bind(this);
     this.handleFreezePocket = this.handleFreezePocket.bind(this);
     this.handleSelectPocket = this.handleSelectPocket.bind(this);
     this.onUnlock = this.onUnlock.bind(this);
     this.handleNewPocketCurrencyChange = this.handleNewPocketCurrencyChange.bind(this);
+    this.handleSelectTransaction = this.handleSelectTransaction.bind(this);
+    this.handleTransactionModalClose = this.handleTransactionModalClose.bind(this);
   }
 
   componentDidMount() {
@@ -331,6 +397,7 @@ export default class WalletPage extends React.Component {
     this.setState({
       selectedPocket: pocket,
       transactionHistory: null,
+      transactionDetails: null,
     });
 
     if (this.cancelablePromise) {
@@ -358,6 +425,53 @@ export default class WalletPage extends React.Component {
       });
   }
 
+  handleSelectTransaction(transactionID) {
+    if (this.cancelablePromise) {
+      this.cancelablePromise.cancel();
+    }
+    const { transactionDetails } = this.state;
+    if (transactionDetails && transactionDetails.transactionID === transactionID) {
+      this.setState({
+        selectedTransaction: transactionID,
+      });
+      return;
+    }
+
+    this.setState({
+      selectedTransaction: transactionID,
+      transactionDetails: null,
+    });
+    const {
+      public: address,
+      selectedPocket: currency,
+    } = this.state;
+    const gatewayAddressPromise = TidePayAPI.getGatewayAddress();
+    const transactionDetailPromise = gatewayAddressPromise
+      .then((value) => {
+        const options = {
+          address,
+          currency,
+          counterparty: value.gateway,
+        };
+        return TidePayAPI.getTransactionDetail(transactionID, options);
+      });
+    const promise = transactionDetailPromise;
+    this.cancelablePromise = Utils.makeCancelable(promise);
+    this.cancelablePromise.promise
+      .then((resp) => {
+        const { transaction } = resp;
+        this.setState({
+          transactionDetails: transaction,
+        });
+      });
+  }
+
+  handleTransactionModalClose() {
+    this.setState({
+      selectedTransaction: null,
+    });
+  }
+
   onUnlock(secret) {
     this.setState({ secret });
   }
@@ -375,7 +489,16 @@ export default class WalletPage extends React.Component {
           <WalletTable pockets={this.state.pockets} secret={this.state.secret} selectedPocket={this.state.selectedPocket} self={this} />
           <br />
           <h2>Transaction History</h2>
-          <TransactionHistory pocket={this.state.selectedPocket} transactionHistory={this.state.transactionHistory} self={this} />
+          <TransactionHistory
+            pocket={this.state.selectedPocket}
+            transactionHistory={this.state.transactionHistory}
+            onSelectTransaction={this.handleSelectTransaction}
+          />
+          <TransactionModal
+            selectedTransaction={this.state.selectedTransaction}
+            transactionDetails={this.state.transactionDetails}
+            onClose={this.handleTransactionModalClose}
+          />
         </div>
       );
     }
