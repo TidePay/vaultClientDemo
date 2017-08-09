@@ -38,6 +38,7 @@ const messageIdString = [
   'Request token to set 2FA',
   'Accept / reject bank account by admin',
   'Pocket activated',
+  'Currency exchanged',
 ];
 
 const messageTypeString = [
@@ -54,7 +55,7 @@ const filterOptions = messageIdString.slice(1).map((value, index) => {
   return { label: value, value: index + 1 };
 });
 
-const defaultFilter = [16, 13, 30, 4, 5, 6, 7, 8, 25, 11, 26, 19, 20, 27, 29, 1, 24, 15];
+const defaultFilter = [16, 13, 30, 4, 5, 6, 7, 8, 25, 11, 26, 19, 20, 27, 29, 1, 24, 15, 31];
 
 function LoadButton(props) {
   const { text, onLoad, options = [] } = props;

@@ -12,13 +12,17 @@ function ExchangeRateForm(props) {
     self,
     baseCurrency,
     currencies,
+    supportedPairs,
   } = props;
 
   if (!secret) {
     return null;
   }
 
-  const symbols = baseCurrency ? currencies.filter(currency => currency !== baseCurrency) : [];
+  function filterCurrency(currency) {
+    return supportedPairs[baseCurrency].includes(currency);
+  }
+  const symbols = baseCurrency ? currencies.filter(filterCurrency) : [];
 
   return (
     <form>
@@ -115,6 +119,7 @@ export default class ExchangePage extends React.Component {
       exchangeToCurrency: '',
       exchangeRate: null,
       note: '',
+      supportedExchangePairs: {},
     };
     this.handleCurrencyChange = this.handleCurrencyChange.bind(this);
     this.handleSubmitExchangeRateForm = this.handleSubmitExchangeRateForm.bind(this);
@@ -124,22 +129,38 @@ export default class ExchangePage extends React.Component {
   }
 
   componentDidMount() {
-    const setLoginInfo = (loginInfo) => {
+    const setResults = ([loginInfo, exchangePairs]) => {
       const { blob } = loginInfo;
       const { account_id } = blob.data;
       this.setState({
         public: account_id,
         hasPaymentPin: blob.has_payment_pin,
         unlockSecret: blob.data.unlock_secret,
+        supportedExchangePairs: exchangePairs,
       });
     };
-    const promise = VaultClient.getLoginInfo();
+    const loginInfoPromise = VaultClient.getLoginInfo()
+      .catch((err) => {
+        console.error('getLoginInfo', err);
+        return Promise.reject(err);
+      });
+    const exchangePairsPromise = TidePayAPI.getExchangePairs()
+      .catch((err) => {
+        console.error('getExchangePairs', err);
+        return Promise.reject(err);
+      });
+    const promise = Promise.all([
+      loginInfoPromise,
+      exchangePairsPromise,
+    ]);
     this.cancelablePromise = Utils.makeCancelable(promise);
     this.cancelablePromise.promise
-      .then(setLoginInfo)
+      .then(setResults)
       .catch((err) => {
-        console.error('BankAccountPage - getLoginInfo', err);
-        alert('Failed to get bank accounts');
+        if (!(err instanceof Error) && err.isCanceled) {
+          return;
+        }
+        alert('Failed to get account balances / supported exchange pairs');
       });
   }
 
@@ -237,7 +258,7 @@ export default class ExchangePage extends React.Component {
           <br />
           <AccountBalanceTable address={this.state.public} onGetAccountBalances={this.onGetAccountBalances} />
           <br />
-          <ExchangeRateForm secret={this.state.secret} self={this} baseCurrency={this.state.baseCurrency} currencies={currencies} />
+          <ExchangeRateForm secret={this.state.secret} self={this} baseCurrency={this.state.baseCurrency} supportedPairs={this.state.supportedExchangePairs} currencies={currencies} />
           <br />
           <ExchangeForm secret={this.state.secret} self={this} exchangeRateMap={this.state.exchangeRateMap} balances={this.state.balances} />
         </div>
