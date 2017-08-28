@@ -124,8 +124,8 @@ export default class RecoverPage extends React.Component {
 
     const { email } = this.state.recover;
 
-    const { blob, loginToken } = this.state.auth.result;
-    console.log('Recovered - token', loginToken);
+    const { blob } = this.state.auth.result;
+    console.log('Recovered');
     return VaultClient.handleRecovery(blob, email)
       .then((result) => {
         console.log('Recover blob successfully', result);

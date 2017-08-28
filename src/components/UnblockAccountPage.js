@@ -124,8 +124,8 @@ export default class UnblockAccountPage extends React.Component {
 
     const { email } = this.state.unblock;
 
-    const { blob, loginToken } = this.state.auth.result;
-    console.log('Unblocked - token', loginToken);
+    const { blob } = this.state.auth.result;
+    console.log('Unblocked');
     return VaultClient.handleRecovery(blob, email)
       .then((result) => {
         console.log('Unblock account successfully', result);
