@@ -21,6 +21,7 @@ import TwoFactorAuthPage from './components/TwoFactorAuthPage';
 import ExchangePage from './components/ExchangePage';
 import ChangePaymentPinPage from './components/ChangePaymentPinPage';
 import UserJournalPage from './components/UserJournalPage';
+import SettingsPage from './components/SettingsPage';
 
 const routes = (
   <Route path="/" component={Layout}>
@@ -43,6 +44,7 @@ const routes = (
     <Route path="/exchange" component={ExchangePage} />
     <Route path="/changepaymentpin" component={ChangePaymentPinPage} />
     <Route path="/journal" component={UserJournalPage} />
+    <Route path="/settings" component={SettingsPage} />
     <Route path="*" component={NotFoundPage} />
   </Route>
 );

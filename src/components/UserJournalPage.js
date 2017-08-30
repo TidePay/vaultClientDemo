@@ -49,6 +49,7 @@ const messageTypeString = [
   'Contact',
   'Authentication',
   'Bank accounts',
+  'Wallet',
 ];
 
 const filterOptions = messageIdString.slice(1).map((value, index) => {
@@ -215,7 +216,7 @@ function JournalScrolling(props) {
 }
 
 function FilterCheckbox(props) {
-  const { options, values, onChange, onApply, onSelectAll, onDeselectAll } = props;
+  const { name, options, values, onChange, onApply, onSelectAll, onDeselectAll } = props;
   const checkboxes = options.map((option) => {
     const { label, value } = option;
     return <p key={value}><label><Checkbox value={value} />{label}</label></p>;
@@ -228,7 +229,7 @@ function FilterCheckbox(props) {
   return (
     <div>
       <div style={style}>
-        <CheckboxGroup name="messageIdfilter" value={values} onChange={onChange}>
+        <CheckboxGroup name={name} value={values} onChange={onChange}>
           {checkboxes}
         </CheckboxGroup>
       </div>
@@ -473,7 +474,7 @@ export default class UserJournalPage extends React.Component {
       childComponents = (
         <div>
           <h2>Message Filter</h2>
-          <FilterCheckbox options={filterOptions} values={filter} onChange={this.handleMessageIdFilterChange} onApply={this.handleMessageIdFilterApply} onSelectAll={this.handleSelectAll} onDeselectAll={this.handleDeselectAll} />
+          <FilterCheckbox name="messageIdfilter" options={filterOptions} values={filter} onChange={this.handleMessageIdFilterChange} onApply={this.handleMessageIdFilterApply} onSelectAll={this.handleSelectAll} onDeselectAll={this.handleDeselectAll} />
           <br />
           <p><b>Unread: {unreadCount}</b></p>
           <br />

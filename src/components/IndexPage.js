@@ -221,6 +221,8 @@ export default class IndexPage extends React.Component {
           <Link to="/2fa">Two Factor Authentication</Link>
           <br />
           <Link to="/journal">User Journal</Link>
+          <br />
+          <Link to="/settings">Settings</Link>
         </div>
         <div>
           <LogoutButton target={this} />
